@@ -15,7 +15,7 @@ var PORT = process.env.PORT || 3001
 
 const io = require('socket.io')(server, {
     cors: {
-        origin: 'https://champion-connect.netlify.app/', //http://localhost:3000
+        origin: 'http://localhost:3000/', //http://localhost:3000
         method: ["GET", "POST"],
     },
 })
@@ -117,6 +117,8 @@ const UsersInRoom = {}
 const playerSocketIdPorps = {}
 const hostSocketIdPorps = {}
 
+const socketLeft = []
+
 
 io.on('connection', (socket)=>{
     allConnections.push(socket.id)
@@ -126,6 +128,10 @@ io.on('connection', (socket)=>{
 
     socket.on('disconnecting', () => {
         console.log(socket.id);
+        if(socketLeft.includes(socket.id)){
+            socketLeft.splice(socketLeft.indexOf(socket.id), 1)
+            return
+        }
         if(hostSocketIdPorps[socket.id] !== undefined){
             console.log(hostSocketIdPorps)
             console.log(hostSocketIdPorps[socket.id])
@@ -158,6 +164,7 @@ io.on('connection', (socket)=>{
             io.to(playerSocketIdPorps[socket.id].room).emit('playerLeftRoom', {
                 UsersInRoom: UsersInRoom[playerSocketIdPorps[socket.id].room]
             })
+            console.log('emited2134213')
 
             delete playerSocketIdPorps[socket.id]
         }
@@ -277,6 +284,7 @@ io.on('connection', (socket)=>{
 
     socket.on('leaveRoom', (data)=>{
         socket.leave(data.room)
+        socketLeft.push(socket.id)
         console.log(socket.rooms, 'see the room you left')
         delete Players[`${data.user}${data.room}`]
         UsersInRoom[data.room].splice(UsersInRoom[data.room].indexOf(data.user), 1)
@@ -286,6 +294,7 @@ io.on('connection', (socket)=>{
         io.to(data.room).emit('playerLeftRoom', {
             UsersInRoom: UsersInRoom[data.room]
         })
+        console.log('emited')
     })
 
     socket.on('EndGame', (data)=>{
