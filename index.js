@@ -118,6 +118,7 @@ const playerSocketIdPorps = {}
 const hostSocketIdPorps = {}
 
 const socketLeft = []
+const roomsWithGames = []
 
 
 io.on('connection', (socket)=>{
@@ -164,7 +165,6 @@ io.on('connection', (socket)=>{
             io.to(playerSocketIdPorps[socket.id].room).emit('playerLeftRoom', {
                 UsersInRoom: UsersInRoom[playerSocketIdPorps[socket.id].room]
             })
-            console.log('emited2134213')
 
             delete playerSocketIdPorps[socket.id]
         }
@@ -172,6 +172,7 @@ io.on('connection', (socket)=>{
 
 
     socket.on('createroom', (data)=>{
+        if(data.host == null) return
         if(rooms.includes(data.room) == false){
         socket.join(data.room)
         rooms.push(data.room)
@@ -271,6 +272,8 @@ io.on('connection', (socket)=>{
             room: data.room,
             gamecode: data.gamecode
         })
+        roomsWithGames.push(data.room)
+
     })
 
     socket.on('PlayerFinsihed', (data)=>{
@@ -305,6 +308,7 @@ io.on('connection', (socket)=>{
         rooms.splice(rooms.indexOf(data.room), 1)
         console.log(rooms, 'this is your rooms')
         roomLimitReached.splice(roomLimitReached.indexOf(data.room), 1)
+        roomsWithGames.splice(roomsWithGames.indexOf(data.room), 1)
     })
 
     socket.on('GameOver', (data)=>{
@@ -315,6 +319,22 @@ io.on('connection', (socket)=>{
         rooms.splice(rooms.indexOf(data.room), 1)
         console.log(rooms, 'this is your rooms')
         roomLimitReached.splice(roomLimitReached.indexOf(data.room), 1)
+        roomsWithGames.splice(roomsWithGames.indexOf(data.room), 1)
+    })
+
+    socket.on('GenerateCode', (data)=>{
+        var code = 0
+        const codeFunction = () => {
+            code = Math.random().toString(36).substring(2)
+            if(rooms.includes(code)){
+                codeFunction()
+            }
+        }
+        codeFunction()
+        if(rooms.includes(code)){
+            codeFunction()
+        }
+        io.to(socket.id).emit('GeneratedCode', code)
     })
 
 
@@ -325,6 +345,12 @@ io.on('connection', (socket)=>{
             io.to(socket.id).emit('roomFull', {
                 room: data.code,
                 message: `The Room ${data.code} Is Full`
+            })
+            return
+        }
+        if(roomsWithGames.includes(data.code)){
+            io.to(socket.id).emit('gameAlreadyStarted', {
+                room: data.code,
             })
             return
         }
