@@ -5,7 +5,7 @@ const http = require('http')
 const cors = require('cors')
 const bodyParser = require('body-parser')
 const stripe = require('stripe')('sk_test_51Isp9eLjpdOyivM3byTsDhyQJl1nYGLr6nnsxhqX3iZlOMOJ4k4bfEcszqSXlS7YDtjTexrE5dmcRXdFfJILGm0u00yR1JyFp8');
-
+const { uniqueNamesGenerator, adjectives, colors, animals } = require('unique-names-generator');
 
 const app = express()
 const server = http.createServer(app)
@@ -119,6 +119,7 @@ const hostSocketIdPorps = {}
 
 const socketLeft = []
 const roomsWithGames = []
+const friendlyRooms = []
 
 
 io.on('connection', (socket)=>{
@@ -300,6 +301,13 @@ io.on('connection', (socket)=>{
         console.log('emited')
     })
 
+    socket.on('kickUser', (data)=>{
+        io.to(data.room).emit('kicked', {
+            room: data.room,
+            user: data.user
+        })
+    })
+
     socket.on('EndGame', (data)=>{
         socket.leave(data.room)
         io.to(data.room).emit('EndedGame', 'end')
@@ -336,11 +344,23 @@ io.on('connection', (socket)=>{
         }
         io.to(socket.id).emit('GeneratedCode', code)
     })
+    socket.on('addFriendlyRoom', (data) =>{
+        friendlyRooms.push(data.room)
+        console.log('friendly room')
+    })
 
 
     socket.on('joinroom', (data)=>{
         console.log(socket.rooms)
         roomFound = false
+        if(friendlyRooms.includes(data.code)){
+            if(data.profane == true){
+                data.name = uniqueNamesGenerator({ 
+                    dictionaries: [adjectives, animals],
+                    style: 'capital'
+                 })
+            }
+        }
         if(roomLimitReached.includes(data.code) == true){
             io.to(socket.id).emit('roomFull', {
                 room: data.code,
